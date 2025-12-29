@@ -1,0 +1,350 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Movement Simulator / 時計ムーブメントシミュレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overscroll-behavior: none;
+        }
+
+        .watch-shadow {
+            filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.6));
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            accent-color: #3b82f6;
+        }
+
+        .active-btn {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .lang-active {
+            color: #3b82f6;
+            font-weight: 700;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 640px) {
+            #watch-dial {
+                width: 280px;
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 py-8 md:justify-center">
+
+    <!-- Top Navigation / Language Toggle -->
+    <div class="fixed top-4 right-4 z-50 flex gap-4 bg-slate-800/80 backdrop-blur px-4 py-2 rounded-full border border-slate-700 text-xs font-semibold uppercase tracking-wider">
+        <button id="lang-en" onclick="setLang('en')" class="lang-active transition-colors hover:text-blue-400">English</button>
+        <span class="text-slate-600">|</span>
+        <button id="lang-jp" onclick="setLang('jp')" class="transition-colors hover:text-blue-400">日本語</button>
+    </div>
+
+    <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mt-8 md:mt-0">
+        
+        <!-- Left Side: Watch Display -->
+        <div class="flex flex-col items-center">
+            <div class="relative watch-shadow">
+                <svg id="watch-dial" viewBox="0 0 400 400" width="380" height="380" class="rounded-full bg-[#1e293b] border-[12px] border-[#334155]">
+                    <!-- Outer Ring -->
+                    <circle cx="200" cy="200" r="195" fill="none" stroke="#475569" stroke-width="1" />
+                    
+                    <!-- Markers Group -->
+                    <g id="markers"></g>
+
+                    <!-- Center Branding -->
+                    <text x="200" y="140" text-anchor="middle" fill="#94a3b8" font-size="12" font-weight="600" letter-spacing="2" id="brand-text">CHRONO-SIMULATOR</text>
+                    <text id="bps-label" x="200" y="270" text-anchor="middle" fill="#3b82f6" font-size="14" font-weight="600" class="mono">andirkh</text>
+                    
+                    <!-- Hands -->
+                    <g id="hands-group">
+                        <!-- Hour Hand -->
+                        <rect id="hour-hand" x="196" y="105" width="8" height="105" rx="4" fill="#f8fafc" style="transform-origin: 200px 200px;" />
+                        <!-- Minute Hand -->
+                        <rect id="minute-hand" x="197" y="55" width="6" height="155" rx="3" fill="#cbd5e1" style="transform-origin: 200px 200px;" />
+                        <!-- Second Hand -->
+                        <g id="second-hand-group" style="transform-origin: 200px 200px;">
+                            <line x1="200" y1="230" x2="200" y2="30" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" />
+                            <circle cx="200" cy="200" r="6" fill="#ef4444" />
+                            <circle cx="200" cy="200" r="2.5" fill="#1e293b" />
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            
+            <div class="mt-8 text-center px-4">
+                <h1 id="main-title" class="text-2xl md:text-3xl font-bold mb-2">Mechanical Sweep Simulator</h1>
+                <p id="main-subtitle" class="text-slate-400 text-sm md:text-base max-w-sm mx-auto">Comparing visual smoothness across different watch movements.</p>
+            </div>
+        </div>
+
+        <!-- Right Side: Controls -->
+        <div class="bg-slate-800/40 p-5 md:p-8 rounded-3xl border border-slate-700/50 backdrop-blur-md">
+            <h2 id="select-title" class="text-lg font-semibold mb-6 flex items-center gap-3">
+                <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
+                Select Movement
+            </h2>
+
+            <div class="grid grid-cols-2 gap-3 mb-8">
+                <button onclick="setBPS(1)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center">
+                    <span class="font-bold">1 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-1">Standard Quartz</span>
+                </button>
+                <button onclick="setBPS(4)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center">
+                    <span class="font-bold">4 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-4">Micro-Sweep</span>
+                </button>
+                <button onclick="setBPS(6)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center">
+                    <span class="font-bold">6 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-6">Standard Mech</span>
+                </button>
+                <button onclick="setBPS(8)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center">
+                    <span class="font-bold">8 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-8">High-Beat</span>
+                </button>
+                <button onclick="setBPS(10)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center">
+                    <span class="font-bold">10 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-10">Luxury High-Beat</span>
+                </button>
+                <button onclick="setBPS(16)" class="bps-btn p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center active-btn">
+                    <span class="font-bold">16 BPS</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter" data-key="label-16">Bulova High-Freq</span>
+                </button>
+                <button onclick="setBPS(0)" class="bps-btn col-span-2 p-3 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-all text-sm mono flex flex-col items-center border border-blue-500/20">
+                    <span class="font-bold" data-key="label-0">Continuous Sweep</span>
+                    <span class="text-[10px] opacity-60 uppercase tracking-tighter">Spring Drive / Monolithic</span>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label id="custom-label" class="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Custom Frequency</label>
+                        <span id="custom-val" class="text-blue-400 text-xs font-bold mono">16</span>
+                    </div>
+                    <input id="bps-slider" type="range" min="1" max="60" value="16" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div class="p-5 bg-slate-900/40 rounded-2xl border border-slate-700/50">
+                    <h3 id="info-header" class="text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Movement Dynamics</h3>
+                    <p id="info-text" class="text-xs md:text-sm text-slate-300 leading-relaxed min-h-[60px]">
+                        Loading information...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const i18n = {
+            en: {
+                title: "Mechanical Sweep Simulator",
+                subtitle: "Comparing visual smoothness across different watch movements.",
+                select: "Select Movement",
+                custom: "Custom Frequency",
+                info: "Movement Dynamics",
+                continuous: "Continuous Sweep",
+                labels: {
+                    1: "Standard Quartz",
+                    4: "Micro-Sweep",
+                    6: "Standard Mech",
+                    8: "High-Beat",
+                    10: "Luxury High-Beat",
+                    16: "Bulova High-Freq",
+                    0: "Continuous Sweep"
+                },
+                bps_text: "BPS",
+                cont_text: "CONTINUOUS",
+                infoMap: {
+                    1: "Standard Quartz: Found in most battery watches. Ticks once per second to conserve power.",
+                    4: "Seiko VH31: A 'sweeping' quartz movement that steps 4 times per second. Found in many microbrands.",
+                    6: "Standard Mechanical: The 21,600 VPH rate found in Seiko 5 and many entry-level automatics.",
+                    8: "High-Beat: The Swiss standard (28,800 VPH) used by Rolex and ETA. Noticeably smoother.",
+                    10: "Grand Seiko Hi-Beat: Vibrates 10 times per second. Very fluid motion for a mechanical watch.",
+                    16: "Bulova Precisionist: 262kHz technology achieving 16 steps per second. Almost perfect fluid motion.",
+                    0: "Spring Drive: Truly continuous movement with zero steps. The ultimate horological sweep.",
+                    custom: "Custom rate: {x} steps per second. High frequencies require specialized oscillators and high energy."
+                }
+            },
+            jp: {
+                title: "秒針ムーブメント比較",
+                subtitle: "異なる時計ムーブメントの視覚的な滑らかさを比較します。",
+                select: "ムーブメント選択",
+                custom: "カスタム周波数",
+                info: "ムーブメント解説",
+                continuous: "完全なスイープ",
+                labels: {
+                    1: "標準クォーツ",
+                    4: "マイクロスイープ",
+                    6: "標準メカニカル",
+                    8: "ハイビート",
+                    10: "高級ハイビート",
+                    16: "ブローバ高精度",
+                    0: "スプリングドライブ"
+                },
+                bps_text: "BPS (秒間ステップ)",
+                cont_text: "連続スイープ",
+                infoMap: {
+                    1: "標準クォーツ: 多くの電池式時計に見られる。電力を節約するために1秒に1回だけ動く。",
+                    4: "セイコー VH31: 毎秒4ステップ動くクォーツ。手頃なマイクロブランドに多い。",
+                    6: "標準メカニカル: 毎時21,600振動。セイコー5などの入門機に多い標準的な動き。",
+                    8: "ハイビート: スイスの標準（毎時28,800振動）。ロレックス等で採用され、滑らかに見える。",
+                    10: "グランドセイコー ハイビート: 毎秒10振動。機械式時計として最高峰の滑らかさを誇る。",
+                    16: "ブローバ プレシジョニスト: 262kHzの高精度クォーツ。毎秒16回刻み、ほぼ流れるような動き。",
+                    0: "スプリングドライブ: ステップが全く存在しない、文字通り「流れる」究極のスイープ運針。",
+                    custom: "カスタム設定: 毎秒{x}回。高周波化には特殊な脱進機と大きなエネルギーが必要となる。"
+                }
+            }
+        };
+
+        let currentLang = 'en';
+        let currentBPS = 16;
+        let isContinuous = false;
+
+        const elements = {
+            markers: document.getElementById('markers'),
+            secondHandGroup: document.getElementById('second-hand-group'),
+            minuteHand: document.getElementById('minute-hand'),
+            hourHand: document.getElementById('hour-hand'),
+            bpsLabel: document.getElementById('bps-label'),
+            bpsSlider: document.getElementById('bps-slider'),
+            customVal: document.getElementById('custom-val'),
+            infoText: document.getElementById('info-text'),
+            mainTitle: document.getElementById('main-title'),
+            mainSubtitle: document.getElementById('main-subtitle'),
+            selectTitle: document.getElementById('select-title'),
+            customLabel: document.getElementById('custom-label'),
+            infoHeader: document.getElementById('info-header')
+        };
+
+        function setLang(lang) {
+            currentLang = lang;
+            
+            // Update Toggle UI
+            document.getElementById('lang-en').classList.toggle('lang-active', lang === 'en');
+            document.getElementById('lang-jp').classList.toggle('lang-active', lang === 'jp');
+            
+            // Update Static Text
+            elements.mainTitle.innerText = i18n[lang].title;
+            elements.mainSubtitle.innerText = i18n[lang].subtitle;
+            elements.selectTitle.innerText = i18n[lang].select;
+            elements.customLabel.innerText = i18n[lang].custom;
+            elements.infoHeader.innerText = i18n[lang].info;
+
+            // Update Labels in buttons
+            document.querySelectorAll('[data-key^="label-"]').forEach(el => {
+                const key = el.getAttribute('data-key').replace('label-', '');
+                el.innerText = i18n[lang].labels[key];
+            });
+
+            // Refresh dynamic labels
+            updateInfoUI();
+        }
+
+        function initDial() {
+            for (let i = 0; i < 60; i++) {
+                const angle = i * 6;
+                const isMajor = i % 5 === 0;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                const width = isMajor ? 5 : 1.5;
+                const height = isMajor ? 18 : 8;
+                line.setAttribute("x", 200 - width / 2);
+                line.setAttribute("y", 10);
+                line.setAttribute("width", width);
+                line.setAttribute("height", height);
+                line.setAttribute("fill", isMajor ? "#f8fafc" : "#475569");
+                line.setAttribute("transform", `rotate(${angle}, 200, 200)`);
+                elements.markers.appendChild(line);
+            }
+        }
+
+        function updateInfoUI() {
+            const langData = i18n[currentLang];
+            
+            // BPS Label inside dial
+            elements.bpsLabel.innerText = isContinuous ? langData.cont_text : `${currentBPS} ${langData.bps_text}`;
+            
+            // Custom slider value
+            elements.customVal.innerText = isContinuous ? "∞" : currentBPS;
+
+            // Info text description
+            if (isContinuous) {
+                elements.infoText.innerText = langData.infoMap[0];
+            } else if (langData.infoMap[currentBPS]) {
+                elements.infoText.innerText = langData.infoMap[currentBPS];
+            } else {
+                elements.infoText.innerText = langData.infoMap.custom.replace('{x}', currentBPS);
+            }
+        }
+
+        function setBPS(bps) {
+            currentBPS = bps;
+            isContinuous = (bps === 0);
+            
+            document.querySelectorAll('.bps-btn').forEach(btn => btn.classList.remove('active-btn'));
+            const clickedBtn = [...document.querySelectorAll('.bps-btn')].find(btn => 
+                btn.innerText.includes(bps === 0 ? "Continuous" : bps + " BPS") ||
+                btn.innerText.includes(bps === 0 ? "スイープ" : bps + " BPS")
+            );
+            if (clickedBtn) clickedBtn.classList.add('active-btn');
+
+            elements.bpsSlider.value = bps === 0 ? 60 : bps;
+            updateInfoUI();
+        }
+
+        elements.bpsSlider.addEventListener('input', (e) => {
+            currentBPS = parseInt(e.target.value);
+            isContinuous = false;
+            document.querySelectorAll('.bps-btn').forEach(btn => btn.classList.remove('active-btn'));
+            updateInfoUI();
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const ms = now.getMilliseconds();
+            const sec = now.getSeconds();
+            const min = now.getMinutes();
+            const hour = now.getHours();
+
+            let secondAngle;
+            if (isContinuous) {
+                secondAngle = (sec * 6) + (ms * 0.006);
+            } else {
+                const step = Math.floor((ms / 1000) * currentBPS);
+                secondAngle = (sec * 6) + (step * (6 / currentBPS));
+            }
+
+            const minuteAngle = (min * 6) + (sec * 0.1);
+            const hourAngle = ((hour % 12) * 30) + (min * 0.5);
+
+            elements.secondHandGroup.style.transform = `rotate(${secondAngle}deg)`;
+            elements.minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+            elements.hourHand.style.transform = `rotate(${hourAngle}deg)`;
+
+            requestAnimationFrame(updateClock);
+        }
+
+        // Init
+        initDial();
+        setLang('en');
+        requestAnimationFrame(updateClock);
+    </script>
+</body>
+</html>
